@@ -15,7 +15,7 @@
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 0 auto; padding: 10px; background-color: #222; color: #fff; }
         
-        h2 { text-align: center; margin-bottom: 10px; font-size: 1.5rem; color: #eee; font-weight: bold; letter-spacing: 1px; }
+        h2 { text-align: center; margin-bottom: 10px; font-size: 1.7rem; color: #eee; font-weight: bold; letter-spacing: 1px; }
 
         /* === 🔐 登入鎖定畫面樣式 === */
         #login-overlay {
@@ -170,7 +170,7 @@
         
         .code-col { width: 30%; word-break: break-all; } 
         .loc-col { width: 15%; text-align: center; }      
-        .name-col { width: 20%; }                          
+        .name-col { width: 20%; }                       
         
         th.qty-col, td.qty-col { 
             width: 10%; 
@@ -794,18 +794,23 @@
                 items: inventory
             };
 
+            // === 修正：加入 headers: text/plain 以避免 CORS 問題 ===
             fetch(SYSTEM_CONFIG.API_URL, {
                 method: 'POST',
+                headers: {
+                    "Content-Type": "text/plain;charset=utf-8",
+                },
                 body: JSON.stringify(payload)
             })
             .then(response => response.text())
             .then(data => {
                 document.getElementById('loading-overlay').style.display = 'none';
-                alert("✅ " + data);
+                alert("✅ 上傳結果: " + data);
             })
             .catch(error => {
                 document.getElementById('loading-overlay').style.display = 'none';
                 alert("❌ 上傳失敗: " + error);
+                console.error(error);
             });
         }
 
