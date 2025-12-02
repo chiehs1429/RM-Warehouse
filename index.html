@@ -732,24 +732,20 @@
                 let item = inventory[code];
                 
                 // ==========================================
-                // 🔹 自動解析數量 (Auto Parse Qty)
-                // 邏輯：抓取最後一個 "-" 後面的數字
+                // 🔹 修正後的自動解析數量 (Auto Parse Qty) 邏輯
+                // 邏輯：抓取最後一個 "-" 後面的 *所有* 內容 (文字或數字)
                 // ==========================================
-                let parsedQty = "";
-                if (code.includes('-')) {
+                let lastPartStr = "";
+                if (code.includes("-")) {
                     let parts = code.split('-');
-                    let lastPart = parts[parts.length - 1];
-                    // 檢查是否為數字
-                    if (!isNaN(parseFloat(lastPart))) {
-                        parsedQty = lastPart;
-                    }
+                    lastPartStr = parts[parts.length - 1]; // 取得最後一部分
                 }
                 // ==========================================
 
                 let defaultName = item ? item.name : (code.split('-')[0] || "");
                 
-                // 如果是新掃描的物品，就使用解析出來的 parsedQty，否則用舊的
-                let defaultQty = item ? item.qty.toString() : (parsedQty || "");
+                // 如果是新掃描的物品，預設數量欄位帶入解析出的文字/數字
+                let defaultQty = item ? item.qty.toString() : lastPartStr;
                 
                 let defaultLoc = item ? item.location : lastLocation;
 
@@ -759,7 +755,7 @@
                 let qtyStr = prompt(`3️⃣ 輸入數量 (Qty):`, defaultQty);
                 if (qtyStr === null) return resumeScan();
                 let qty = parseFloat(qtyStr);
-                if (isNaN(qty)) qty = 1.00;
+                if (isNaN(qty)) qty = 1.00; // 如果使用者輸入的是文字，會自動設定為 1.00 (或依據你的 `qtyStr` 預設值)
 
                 let location = prompt(`4️⃣ 輸入庫位 (Location):`, defaultLoc);
                 if (location === null) return resumeScan();
@@ -895,4 +891,3 @@
         renderTable();
     </script>
 </body>
-</html>
