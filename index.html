@@ -401,7 +401,7 @@
         if (!appSettings.filenameFormat) appSettings.filenameFormat = "USER_YYYYMMDDHHmmss";
         localStorage.setItem('appSettings', JSON.stringify(appSettings));
         
-        // 🔹 數量輸入模式變數 (已修正為記憶模式)
+        // 🔹 數量輸入模式變數
         let qtyInputMode = localStorage.getItem('qtyInputMode') || 'auto'; 
 
         let html5QrcodeScanner = null;
@@ -777,7 +777,7 @@
 
                 let item = inventory[code];
                 
-                // 執行自動解析邏輯 (無論如何都解析)
+                // 執行自動解析邏輯 (無論模式如何，先解析)
                 let lastPartStr = "";
                 if (code.includes("-")) {
                     let parts = code.split('-');
@@ -787,15 +787,18 @@
                 let defaultName = item ? item.name : (code.split('-')[0] || "");
                 
                 let defaultQty;
+                // 檢查舊紀錄：如果物品已存在，永遠使用儲存的數量 (覆蓋模式設定，確保資料安全)
                 if (item) {
-                    // 舊物品：使用儲存的數量
                     defaultQty = item.qty.toString();
-                } else if (qtyInputMode === 'auto') {
-                    // 新物品且為自動模式：使用解析出的文字/數字 (條碼最後一個 '-' 後的內容)
-                    defaultQty = lastPartStr;
                 } else {
-                    // 新物品且為手動模式：預設為空白 (符合要求：手動模式預設不能出現 '1')
-                    defaultQty = ""; 
+                    // 檢查新紀錄：根據當前模式決定
+                    if (qtyInputMode === 'auto') {
+                        // 🔹 修正 auto 模式：新項目時，帶入解析的後綴
+                        defaultQty = lastPartStr; 
+                    } else { // manual
+                        // 🔹 修正 manual 模式：新項目時，預設為空字串 (不會帶入任何數字或文字)
+                        defaultQty = "";          
+                    }
                 }
                 
                 let defaultLoc = item ? item.location : lastLocation;
@@ -803,7 +806,6 @@
                 let name = prompt(`2️⃣ 輸入品名 (Name):`, defaultName);
                 if (name === null) return resumeScan();
 
-                // 游標無法控制，但輸入欄預設為空白
                 let qtyStr = prompt(`3️⃣ 輸入數量 (Qty):`, defaultQty); 
                 if (qtyStr === null) return resumeScan();
                 
