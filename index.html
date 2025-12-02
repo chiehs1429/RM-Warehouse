@@ -170,7 +170,7 @@
         
         .code-col { width: 30%; word-break: break-all; } 
         .loc-col { width: 15%; text-align: center; }      
-        .name-col { width: 20%; }                       
+        .name-col { width: 20%; }                        
         
         th.qty-col, td.qty-col { 
             width: 10%; 
@@ -720,7 +720,7 @@
         function saveDataPrompt(initialText) {
             setTimeout(() => {
                 let code = prompt("1️⃣ 確認原始碼 (Code):", initialText);
-                if (code === null) return resumeScan(); 
+                if (code === null) return resumeScan();
                 code = code.replace(/[^a-zA-Z0-9.-]/g, "").trim();
                 if (!code) return resumeScan();
 
@@ -730,8 +730,27 @@
                 }
 
                 let item = inventory[code];
+                
+                // ==========================================
+                // 🔹 自動解析數量 (Auto Parse Qty)
+                // 邏輯：抓取最後一個 "-" 後面的數字
+                // ==========================================
+                let parsedQty = "";
+                if (code.includes('-')) {
+                    let parts = code.split('-');
+                    let lastPart = parts[parts.length - 1];
+                    // 檢查是否為數字
+                    if (!isNaN(parseFloat(lastPart))) {
+                        parsedQty = lastPart;
+                    }
+                }
+                // ==========================================
+
                 let defaultName = item ? item.name : (code.split('-')[0] || "");
-                let defaultQty = item ? item.qty.toString() : "";
+                
+                // 如果是新掃描的物品，就使用解析出來的 parsedQty，否則用舊的
+                let defaultQty = item ? item.qty.toString() : (parsedQty || "");
+                
                 let defaultLoc = item ? item.location : lastLocation;
 
                 let name = prompt(`2️⃣ 輸入品名 (Name):`, defaultName);
