@@ -60,7 +60,7 @@
         }
         
         /* 模式切換按鈕 */
-        .mode-switch { display: flex; gap: 8px; margin-bottom: 10px; }
+        .mode-switch, .qty-mode-switch { display: flex; gap: 8px; margin-bottom: 10px; }
         .mode-btn { 
             flex: 1; padding: 8px; border: none; border-radius: 20px; 
             background: #333; color: #aaa; font-weight: bold; cursor: pointer; transition: 0.3s; 
@@ -236,7 +236,15 @@
             文字識別<small>OCR Text</small>
         </button>
     </div>
-
+    
+    <div class="qty-mode-switch">
+         <button id="qty-mode-auto" class="mode-btn" onclick="setQtyMode('auto')">
+            自動抓取數量<small>Auto Qty (From '-suffix')</small>
+         </button>
+         <button id="qty-mode-manual" class="mode-btn" onclick="setQtyMode('manual')">
+            手動輸入數量<small>Manual Qty Input</small>
+         </button>
+    </div>
     <div class="viewport" onclick="handleViewportClick()">
         <div id="reader"></div>
         <video id="ocr-video" autoplay playsinline></video>
@@ -392,6 +400,9 @@
         if (appSettings.maxLen === undefined) appSettings.maxLen = 50;
         if (!appSettings.filenameFormat) appSettings.filenameFormat = "USER_YYYYMMDDHHmmss";
         localStorage.setItem('appSettings', JSON.stringify(appSettings));
+        
+        // 🔹 新增：數量輸入模式變數
+        let qtyInputMode = localStorage.getItem('qtyInputMode') || 'auto'; 
 
         let html5QrcodeScanner = null;
         let ocrStream = null;
@@ -450,6 +461,37 @@
             renderTable();
             alert("✅ 設定已儲存");
         }
+        
+        // 🔹 數量模式切換邏輯
+        function setQtyMode(mode) {
+            qtyInputMode = mode;
+            localStorage.setItem('qtyInputMode', mode);
+            
+            // 更新按鈕樣式
+            document.getElementById('qty-mode-auto').classList.remove('active');
+            document.getElementById('qty-mode-manual').classList.remove('active');
+            document.getElementById(`qty-mode-${mode}`).classList.add('active');
+            
+            alert(`數量輸入模式已切換至: ${mode === 'auto' ? '自動抓取 (Auto)' : '手動輸入 (Manual)'}`);
+        }
+        
+        function initializeQtyModeUI() {
+            const mode = qtyInputMode;
+             // 確保元素存在再嘗試更新
+            const autoBtn = document.getElementById('qty-mode-auto');
+            const manualBtn = document.getElementById('qty-mode-manual');
+            
+            if (autoBtn && manualBtn) {
+                autoBtn.classList.remove('active');
+                manualBtn.classList.remove('active');
+                if (mode === 'auto') {
+                    autoBtn.classList.add('active');
+                } else {
+                    manualBtn.classList.add('active');
+                }
+            }
+        }
+        // 🔹 結束數量模式切換邏輯
 
         function openCloudSheet() {
             window.open(SYSTEM_CONFIG.SHEET_URL, '_blank');
@@ -731,21 +773,26 @@
 
                 let item = inventory[code];
                 
-                // ==========================================
-                // 🔹 修正後的自動解析數量 (Auto Parse Qty) 邏輯
-                // 邏輯：抓取最後一個 "-" 後面的 *所有* 內容 (文字或數字)
-                // ==========================================
+                // 執行自動解析邏輯 (無論如何都解析，因為 Code 可能被修改)
                 let lastPartStr = "";
                 if (code.includes("-")) {
                     let parts = code.split('-');
-                    lastPartStr = parts[parts.length - 1]; // 取得最後一部分
+                    lastPartStr = parts[parts.length - 1]; 
                 }
-                // ==========================================
 
                 let defaultName = item ? item.name : (code.split('-')[0] || "");
                 
-                // 如果是新掃描的物品，預設數量欄位帶入解析出的文字/數字
-                let defaultQty = item ? item.qty.toString() : lastPartStr;
+                let defaultQty;
+                if (item) {
+                    // 舊物品：使用儲存的數量
+                    defaultQty = item.qty.toString();
+                } else if (qtyInputMode === 'auto') {
+                    // 新物品且為自動模式：使用解析出的文字/數字
+                    defaultQty = lastPartStr;
+                } else {
+                    // 新物品且為手動模式：預設為空白，讓使用者輸入
+                    defaultQty = ""; 
+                }
                 
                 let defaultLoc = item ? item.location : lastLocation;
 
@@ -755,7 +802,7 @@
                 let qtyStr = prompt(`3️⃣ 輸入數量 (Qty):`, defaultQty);
                 if (qtyStr === null) return resumeScan();
                 let qty = parseFloat(qtyStr);
-                if (isNaN(qty)) qty = 1.00; // 如果使用者輸入的是文字，會自動設定為 1.00 (或依據你的 `qtyStr` 預設值)
+                if (isNaN(qty)) qty = 1.00; // 如果使用者輸入的是文字，會自動設定為 1.00
 
                 let location = prompt(`4️⃣ 輸入庫位 (Location):`, defaultLoc);
                 if (location === null) return resumeScan();
@@ -883,6 +930,9 @@
                 renderTable(); 
             }
         }
+        
+        // 頁面加載時初始化數量模式按鈕狀態
+        initializeQtyModeUI(); 
 
         currentMode = 'ocr';
         document.querySelector('.mode-btn[onclick="switchMode(\'ocr\')"]').classList.add('active');
@@ -891,3 +941,4 @@
         renderTable();
     </script>
 </body>
+</html>
