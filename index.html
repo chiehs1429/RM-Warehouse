@@ -17,30 +17,7 @@
         
         h2 { text-align: center; margin-bottom: 10px; font-size: 1.7rem; color: #eee; font-weight: bold; letter-spacing: 1px; }
 
-        /* === 🔐 登入鎖定畫面樣式 === */
-        #login-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: #111; z-index: 9999; /* 確保蓋過所有內容 */
-            display: flex; justify-content: center; align-items: center; flex-direction: column;
-        }
-        .login-box {
-            background: #333; padding: 30px; border-radius: 12px; border: 1px solid #555;
-            text-align: center; width: 90%; max-width: 350px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
-        }
-        .login-box h3 { margin-top: 0; color: #17a2b8; margin-bottom: 20px; }
-        .login-input {
-            width: 100%; padding: 12px; font-size: 1.2rem; text-align: center;
-            margin-bottom: 20px; border-radius: 6px; border: 1px solid #555;
-            background: #222; color: white; letter-spacing: 2px;
-        }
-        .btn-login {
-            width: 100%; padding: 12px; font-size: 1.1rem; font-weight: bold;
-            background-color: #28a745; color: white; border: none; border-radius: 6px;
-            cursor: pointer; transition: 0.3s;
-        }
-        .btn-login:active { transform: scale(0.98); }
-        /* ==================================== */
+        /* 移除登入畫面 CSS */
 
         /* 人員代號輸入區 */
         .user-bar {
@@ -52,11 +29,6 @@
         .input-field {
             flex: 1; min-width: 100px; padding: 8px; border: 1px solid #555; border-radius: 4px;
             background: #fff; color: #000; font-size: 1.1rem; letter-spacing: 1px; font-weight: bold;
-        }
-        /* 新增：鎖定按鈕樣式 */
-        .btn-lock {
-            padding: 8px 12px; background: #dc3545; border: none; border-radius: 4px; color: white;
-            font-weight: bold; cursor: pointer; font-size: 0.9rem;
         }
         
         /* 模式切換按鈕 */
@@ -211,22 +183,12 @@
 </head>
 <body>
 
-    <div id="login-overlay">
-        <div class="login-box">
-            <h3>🔐 系統鎖定 Locked</h3>
-            <p style="color:#aaa; font-size:0.9rem; margin-bottom:15px;">請輸入密碼以解鎖</p>
-            <input type="password" id="loginPass" class="login-input" placeholder="Password" onkeyup="checkEnter(event)">
-            <button class="btn-login" onclick="checkLogin()">解鎖 Unlock</button>
-            <p id="loginMsg" style="color:#dc3545; margin-top:10px; font-weight:bold;"></p>
-        </div>
-    </div>
     <h2>RM_Wh Inventory</h2>
 
     <div class="user-bar">
         <label>👤 人員代號 (User):</label>
         <input type="text" id="userInput" class="input-field" placeholder="請先輸入代號" onchange="changeUser(this.value)">
-        <button class="btn-lock" onclick="logoutSystem()" title="登出/鎖定 (Logout)">🔒</button>
-    </div>
+        </div>
 
     <div class="mode-switch">
         <button class="mode-btn active" onclick="switchMode('barcode')">
@@ -344,49 +306,8 @@
             SHEET_URL: "https://docs.google.com/spreadsheets/d/1cXxK-G5BhFszXUpCp4a4KcHBonsI1zaHewZOgx7V3Zs/edit?gid=0#gid=0"
         };
         
-        // 🔐 系統密碼 (請在此修改)
-        const SYSTEM_PASSWORD = "1122334"; 
+        // 移除 SYSTEM_PASSWORD 及登入相關函式 (checkLogin, logoutSystem, checkEnter)
 
-        // ==========================================
-
-        // === 🔐 登入/記憶 邏輯 ===
-        
-        // 1. 頁面載入時檢查是否已登入
-        if (localStorage.getItem('isSystemLogged') === 'true') {
-            document.getElementById('login-overlay').style.display = 'none';
-        }
-
-        function checkLogin() {
-            const input = document.getElementById('loginPass').value;
-            const msg = document.getElementById('loginMsg');
-            
-            if (input === SYSTEM_PASSWORD) {
-                // 密碼正確
-                document.getElementById('login-overlay').style.display = 'none';
-                document.getElementById('loginMsg').innerText = "";
-                
-                // 儲存登入狀態
-                localStorage.setItem('isSystemLogged', 'true');
-            } else {
-                // 密碼錯誤
-                msg.innerText = "❌ 密碼錯誤 (Wrong Password)";
-                document.getElementById('loginPass').value = "";
-            }
-        }
-
-        function logoutSystem() {
-            if(confirm("確定要鎖定/登出嗎? Lock System?")) {
-                localStorage.removeItem('isSystemLogged');
-                document.getElementById('login-overlay').style.display = 'flex';
-                document.getElementById('loginPass').value = "";
-            }
-        }
-
-        function checkEnter(event) {
-            if (event.key === "Enter") {
-                checkLogin();
-            }
-        }
         // ===================
 
         let savedUser = localStorage.getItem('currentUser') || "Default"; 
@@ -766,7 +687,7 @@
         function saveDataPrompt(initialText) {
             setTimeout(() => {
                 let code = prompt("1️⃣ 確認原始碼 (Code):", initialText);
-                if (code === null) return resumeScan();
+                if (code === null) return resumeScan(); 
                 code = code.replace(/[^a-zA-Z0-9.-]/g, "").trim();
                 if (!code) return resumeScan();
 
@@ -797,7 +718,7 @@
                         defaultQty = lastPartStr; 
                     } else { // manual
                         // 🔹 修正 manual 模式：新項目時，預設為空字串 (不會帶入任何數字或文字)
-                        defaultQty = "";          
+                        defaultQty = "";           
                     }
                 }
                 
