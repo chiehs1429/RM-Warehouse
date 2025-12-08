@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RM_Wh Inventory System</title>
+    <title>RM_Wh Inventory System (India Time)</title>
     
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src='https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js'></script>
@@ -142,7 +142,7 @@
         
         .code-col { width: 30%; word-break: break-all; } 
         .loc-col { width: 15%; text-align: center; }      
-        .name-col { width: 20%; }                        
+        .name-col { width: 20%; }                          
         
         th.qty-col, td.qty-col { 
             width: 10%; 
@@ -827,7 +827,15 @@
                 let link = document.createElement("a");
                 link.href = url;
                 
-                const now = new Date();
+                // ============================================
+                // 🕒 TIMEZONE FIX: INDIA (IST) UTC+5:30
+                // ============================================
+                const d = new Date();
+                // 1. 取得 UTC 時間 (毫秒)
+                const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+                // 2. 加上印度時區偏移 (+5.5 小時)
+                const now = new Date(utc + (3600000 * 5.5));
+
                 const YYYY = now.getFullYear();
                 const MM = String(now.getMonth() + 1).padStart(2, '0');
                 const DD = String(now.getDate()).padStart(2, '0');
