@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RM Wh Inventory System (Scanner Integrated)</title>
+    <title>RM Wh Inventory System (Scanner V3.14 Integrated)</title>
     
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src='https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js'></script>
@@ -55,24 +55,51 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.2);
         }
         
-        /* Barcode Specific Elements */
-        #reader { width: 100%; height: 100%; object-fit: cover; display: none; }
-        #scan-overlay {
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 250px; height: 250px;
-            border: 4px solid #00ff00;
-            box-shadow: 0 0 0 1000px rgba(0,0,0,0.5);
-            z-index: 10;
-            border-radius: 20px;
-            pointer-events: none;
-            display: none; 
+        /* -----------------------------------------------------------
+           [V3.14 Integrated] Barcode Specific Elements 
+           ----------------------------------------------------------- */
+        
+        #reader { width: 100%; height: 100%; background: #000; }
+        /* 強制 Video 填滿容器，確保 Canvas 座標對齊 */
+        #reader video { object-fit: cover; width: 100%; height: 100%; }
+
+        /* 動態追蹤畫布 - 覆蓋在 Video 上 */
+        #qr-canvas {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none; 
+            z-index: 20; 
+            display: none; /* JS控制顯示 */
         }
+
+        /* 中心對焦框 (紅/綠變色) - V3.14 樣式 */
+        #center-guide {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;  /* 80px 大尺寸 */
+            height: 80px; 
+            border: 2px solid rgba(255, 0, 0, 0.8); /* 預設紅色 */
+            z-index: 15; 
+            pointer-events: none;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            border-radius: 10px;
+            display: none; /* JS控制顯示 */
+        }
+
+        /* 成功鎖定時的綠色樣式 */
+        .guide-success {
+            border-color: #00ff00 !important; 
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.8) !important; 
+            background-color: rgba(0, 255, 0, 0.1); 
+        }
+
         .camera-hint {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            position: absolute; bottom: 10px; left: 0; right: 0;
             display: flex; justify-content: center; align-items: center;
-            color: white; font-size: 1.2rem; font-weight: bold;
-            text-align: center; z-index: 20; pointer-events: none;
+            color: white; font-size: 1.1rem; font-weight: bold;
+            text-align: center; z-index: 25; pointer-events: none;
             white-space: pre-line;
             text-shadow: 1px 1px 4px black;
             display: none; /* Hidden by default */
@@ -100,6 +127,7 @@
             pointer-events: none; transition: 0.3s all; box-shadow: 0 0 2px rgba(255,0,0,0.5);
         }
         .guide-box.ready .guide-line { background-color: rgba(0, 255, 0, 0.3); }
+        .guide-box.paused .guide-line { background-color: rgba(0, 123, 255, 0.3); }
         .guide-text {
             position: absolute; top: -45px; left: 0; width: 100%;
             text-align: center; color: #ff4d4d; font-size: 0.9rem; font-weight: bold;
@@ -107,6 +135,7 @@
             background: rgba(0,0,0,0.6); padding: 4px 0; border-radius: 4px;
         }
         .guide-box.ready .guide-text { color: #00ff00; content: "✅ Ready"; }
+        .guide-box.paused .guide-text { color: #007bff; }
 
         /* Controls Area */
         .controls { display: flex; gap: 8px; padding: 5px 0; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap;}
@@ -120,19 +149,11 @@
         button.action-btn small { font-size: 0.7rem; font-weight: normal; opacity: 0.9; margin-top: 2px; }
 
         .btn-clear { background-color: #6c757d; } 
-        .btn-flash { background-color: #ffc107; color: #333 !important; display: none; }
+        .btn-flash { background-color: #ffc107; color: #333 !important; display: none; } /* Hidden for Barcode mode */
         .btn-export { background-color: #28a745; }
         .btn-settings { background-color: #17a2b8; }
         .btn-upload { background-color: #007bff; }
         .btn-sheet { background-color: #6610f2; } 
-
-        #loading-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); display: none;
-            justify-content: center; align-items: center; flex-direction: column; z-index: 300;
-        }
-        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #dc3545; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px;}
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         /* Table Styles */
         .table-container { margin-top: 0; overflow-x: auto; background: #fff; border-radius: 8px; color: #333; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
@@ -173,16 +194,25 @@
             background-color: #444 !important; color: #aaa !important;
             border: none !important; cursor: not-allowed; font-size: 0.8rem;
         }
+        
+        /* Loading Overlay */
+        #loading-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); display: none;
+            justify-content: center; align-items: center; flex-direction: column; z-index: 300;
+        }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #dc3545; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px;}
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
     <div id="loading-overlay">
         <div class="spinner"></div>
-        <div style="color:white; font-weight:bold;" id="loading-text">分析中...</div>
+        <div style="color:white; font-weight:bold;" id="loading-text">Processing...</div>
     </div>
 
-    <h2>RM_Wh Inventory</h2>
+    <h2>RM Wh Inventory</h2>
 
     <div class="user-bar">
         <label>👤 User ID:</label>
@@ -208,8 +238,9 @@
     </div>
 
     <div class="viewport" onclick="handleViewportClick()">
+        <canvas id="qr-canvas"></canvas>
+        <div id="center-guide"></div>
         <div id="reader"></div>
-        <div id="scan-overlay"></div>
         <div id="cam-hint-text" class="camera-hint">👆 點擊畫面開始掃描</div>
 
         <video id="ocr-video" autoplay playsinline></video>
@@ -347,7 +378,8 @@
             // 1. Cleanup: Stop Barcode Scanner
             stopBarcodeScanner(); 
             document.getElementById('reader').style.display = 'none';
-            document.getElementById('scan-overlay').style.display = 'none';
+            document.getElementById('qr-canvas').style.display = 'none';
+            document.getElementById('center-guide').style.display = 'none';
             document.getElementById('cam-hint-text').style.display = 'none';
 
             // 2. Cleanup: Stop OCR Scanner
@@ -359,6 +391,8 @@
             // 3. Setup New Mode UI
             if (mode === 'barcode') {
                 document.getElementById('reader').style.display = 'block';
+                document.getElementById('qr-canvas').style.display = 'block';
+                document.getElementById('center-guide').style.display = 'block';
                 document.getElementById('cam-hint-text').style.display = 'flex';
                 document.getElementById('cam-hint-text').innerText = "👆 點擊畫面開始掃描";
                 document.getElementById('cam-hint-text').style.color = "white";
@@ -385,30 +419,44 @@
         }
 
         // ==========================================
-        // 📷 Barcode / QR Logic (Standalone Flow)
+        // 📷 [V3.14 Integrated] Barcode / QR Logic
         // ==========================================
         function startBarcodeScan() {
-            const overlay = document.getElementById('scan-overlay');
             const hint = document.getElementById('cam-hint-text');
             
             currentDetectedCode = null;
+            clearCanvas();
+            document.getElementById('center-guide').classList.remove('guide-success');
 
             if (!html5QrCode) {
                 html5QrCode = new Html5Qrcode("reader");
             }
 
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            // High FPS for smoother tracking
+            const config = { fps: 15, qrbox: { width: 250, height: 250 } };
 
             html5QrCode.start({ facingMode: "environment" }, config, 
-                (decodedText) => {
+                (decodedText, decodedResult) => {
+                    // --- Detection Callback ---
                     currentDetectedCode = decodedText;
-                    hint.innerText = `🔍 Detected:\n${decodedText}\n(Tap screen to confirm)`;
+                    
+                    // 1. Draw Green Brackets (if points available)
+                    if (decodedResult && decodedResult.result && decodedResult.result.points) {
+                        drawDetectedCorners(decodedResult.result.points);
+                    }
+
+                    // 2. Turn Center Box Green
+                    document.getElementById('center-guide').classList.add('guide-success');
+
+                    // 3. Update Hint
+                    hint.innerText = `🔍 Detected:\n${decodedText}\n(Tap to add)`;
                     hint.style.color = "#ffff00"; 
                 },
-                (errorMessage) => {}
+                (errorMessage) => {
+                    // Scanning... No code detected
+                }
             ).then(() => {
                 isBarcodeScanning = true;
-                overlay.style.display = "block";
                 hint.style.display = "flex";
                 hint.innerText = "👀 Scanning... Point at code";
                 hint.style.color = "white";
@@ -425,9 +473,12 @@
                 stopBarcodeScanner();
                 saveDataPrompt(currentDetectedCode);
             } else {
+                // Cancel logic: clear state, reset UI
                 currentDetectedCode = null;
                 document.getElementById('cam-hint-text').innerText = "👀 Scanning... Point at code";
                 document.getElementById('cam-hint-text').style.color = "white";
+                clearCanvas();
+                document.getElementById('center-guide').classList.remove('guide-success');
             }
         }
 
@@ -436,7 +487,8 @@
 
             return html5QrCode.stop().then(() => {
                 isBarcodeScanning = false;
-                document.getElementById('scan-overlay').style.display = 'none';
+                clearCanvas();
+                document.getElementById('center-guide').classList.remove('guide-success');
                 
                 const hint = document.getElementById('cam-hint-text');
                 hint.innerText = "👆 點擊畫面開始掃描";
@@ -445,6 +497,67 @@
                 currentDetectedCode = null;
                 html5QrCode.clear();
             }).catch(err => console.log("Stop failed", err));
+        }
+
+        // --- Helper: Draw Dynamic Brackets (12px visual size) ---
+        function drawDetectedCorners(points) {
+            const canvas = document.getElementById('qr-canvas');
+            const video = document.querySelector('#reader video');
+            if (!canvas || !video || !points || points.length < 4) return;
+
+            const ctx = canvas.getContext('2d');
+            
+            // Ensure Canvas resolution matches Video display size
+            canvas.width = video.clientWidth;
+            canvas.height = video.clientHeight;
+
+            // Calculate Scale
+            const scaleX = video.clientWidth / video.videoWidth;
+            const scaleY = video.clientHeight / video.videoHeight;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Style
+            ctx.lineWidth = 4; 
+            ctx.strokeStyle = "#00ff00"; 
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+
+            // Map points
+            const p = points.map(pt => ({ x: pt.x * scaleX, y: pt.y * scaleY }));
+
+            // Bracket length (approx 0.3CM visually)
+            const bracketLen = 12; 
+
+            ctx.beginPath();
+            for (let i = 0; i < 4; i++) {
+                const curr = p[i];
+                const prev = p[(i - 1 + 4) % 4];
+                const next = p[(i + 1) % 4];
+
+                const getNormalizedVector = (pFrom, pTo) => {
+                    let dx = pTo.x - pFrom.x;
+                    let dy = pTo.y - pFrom.y;
+                    const len = Math.sqrt(dx*dx + dy*dy) || 1; 
+                    return { x: dx / len, y: dy / len };
+                };
+
+                const vecPrev = getNormalizedVector(curr, prev);
+                const vecNext = getNormalizedVector(curr, next);
+
+                ctx.moveTo(curr.x + vecPrev.x * bracketLen, curr.y + vecPrev.y * bracketLen);
+                ctx.lineTo(curr.x, curr.y);
+                ctx.lineTo(curr.x + vecNext.x * bracketLen, curr.y + vecNext.y * bracketLen);
+            }
+            ctx.stroke();
+        }
+
+        function clearCanvas() {
+            const canvas = document.getElementById('qr-canvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
         }
 
         // ==========================================
@@ -478,6 +591,18 @@
             isTorchOn = false;
             document.getElementById('btn-flash').classList.remove('active');
             isOcrScanning = false;
+        }
+
+        function toggleTorch() {
+            if (!videoTrack) { alert("Camera not active"); return; }
+            isTorchOn = !isTorchOn;
+            videoTrack.applyConstraints({ advanced: [{ torch: isTorchOn }] })
+            .then(() => {
+                const btn = document.getElementById('btn-flash');
+                if(isTorchOn) { btn.style.backgroundColor = "#fff"; btn.style.color = "#000"; } 
+                else { btn.style.backgroundColor = "#ffc107"; btn.style.color = "#333"; }
+            })
+            .catch(e => { isTorchOn = !isTorchOn; alert("Flash not supported"); });
         }
 
         function startImageAnalysis(video) {
@@ -576,23 +701,10 @@
         function resumeOcrScanning() {
             isOcrScanning = true;
             document.getElementById('ocr-video').play();
-            startImageAnalysis(document.getElementById('ocr-video')); // Restart analysis loop
             const box = document.getElementById('guideBox');
             const text = document.getElementById('guideText');
             box.classList.remove('paused');
             text.innerText = "請以中心線覆蓋文字";
-        }
-
-        function toggleTorch() {
-            if (!videoTrack) { alert("Camera not active"); return; }
-            isTorchOn = !isTorchOn;
-            videoTrack.applyConstraints({ advanced: [{ torch: isTorchOn }] })
-            .then(() => {
-                const btn = document.getElementById('btn-flash');
-                if(isTorchOn) { btn.style.backgroundColor = "#fff"; btn.style.color = "#000"; } 
-                else { btn.style.backgroundColor = "#ffc107"; btn.style.color = "#333"; }
-            })
-            .catch(e => { isTorchOn = !isTorchOn; alert("Flash not supported"); });
         }
 
         // ==========================================
@@ -714,7 +826,7 @@
                     if (qtyInputMode === 'auto') {
                         defaultQty = lastPartStr; 
                     } else { 
-                        defaultQty = "";           
+                        defaultQty = "";            
                     }
                 }
                 
@@ -853,7 +965,7 @@
         }
 
         function clearData() {
-            if(confirm("Clear all inventory data?")) { 
+            if(confirm("Clear All?")) { 
                 inventory={}; 
                 saveCurrentInventory();
                 renderTable(); 
@@ -885,6 +997,10 @@
             closeSettings();
             renderTable();
             alert("✅ Settings Saved");
+        }
+
+        function openCloudSheet() {
+            window.open(SYSTEM_CONFIG.SHEET_URL, '_blank');
         }
 
         // Initialize to Barcode mode
